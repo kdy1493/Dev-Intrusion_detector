@@ -196,9 +196,3 @@ tensorrt_setup_info.json
 
 # Keep empty directories
 !**/.gitkeep
-
-# Local sensitive settings
-/demo/config/mqtt_settings.py
-
-# Ignore nested repository
-intrusion_detector/
