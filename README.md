@@ -6,7 +6,7 @@ This repository implements a four-stage end-to-end system for detecting and resp
    Continuously monitor WiFi CSI (Channel State Information) to detect door openings or human entry.
 
 2. **Intruder Localization**  
-   Analyze phase and amplitude shifts to approximate the intruder’s position in the room.
+   Analyze phase and amplitude shifts to approximate the intruder's position in the room.
 
 3. **Real-Time Human Detection & Tracking**  
    - **YOLOv8** for ultra-fast person bounding-box detection  
@@ -15,7 +15,7 @@ This repository implements a four-stage end-to-end system for detecting and resp
    - **Automated Recording**: Trigger 5-second video clips when suspicious activity is detected  
    - **DAM (Dynamic Action Model)**: Generate natural language descriptions of human actions and behaviors from recorded video segments  
 5. **Logging & Anomaly Alerts**  
-   Record intrusion events, track “stationary interaction” behaviors, and push logs/alerts to the dashboard or mobile.
+   Record intrusion events, track "stationary interaction" behaviors, and push logs/alerts to the dashboard or mobile.
 
 By combining wireless sensing, computer vision, and intelligent logging, this pipeline delivers robust, automated intrusion monitoring in real time.
 
@@ -67,13 +67,39 @@ cd ..
 Run the web application for real-time human detection and tracking:
 
 ```bash
-python -m human_detection.app
+python -m demo.app
 ```
 
 After running, access the web interface at `http://localhost:5000`.
 
+### DAM Model Demonstration
+To demonstrate the DAM (Describe Anything Model) functionality:
+
+1. Open two separate terminal windows
+2. In the first terminal, run the demo script:
+```bash
+python scripts/demo.py
+```
+3. In the second terminal, run the API controller:
+```bash
+python scripts/api_controller.py
+```
+4. Press 's' in the API controller terminal to trigger recording and description generation
+
+Note: Currently, the human detection and description systems are not fully integrated. The API controller sends dummy data for demonstration purposes. This integration will be updated in future releases.
+
+### MQTT Configuration
+To use the CSI-based presence detection feature, you need to configure your MQTT broker settings in `demo/config/mqtt_settings.py`:
+
+```python
+BROKER_ADDR = "your_broker_address"
+BROKER_PORT = your_broker_port
+```
+
+The repository includes default topic configurations for ESP32 devices, but you can modify these settings according to your specific MQTT setup.
+
 ### Customization
-You can customize various settings in `src/human_detection/config/settings.py`:
+You can customize various settings in `demo/config/settings.py`:
 
 - **Camera Settings**: Change `CAMERA_INDEX` to use different cameras
 - **Model Paths**: Update `YOLO_MODEL_PATH` and `SAM_CHECKPOINT_PATH` to use different model checkpoints
@@ -83,7 +109,7 @@ You can customize various settings in `src/human_detection/config/settings.py`:
 This project leverages:  
 - **YOLOv8** by Ultralytics for ultra-fast real-time person detection.  
 - **SAM2** by Meta FAIR for pixel-precise segmentation and tracking.  
-- **SAMURAI** by the University of Washington’s Information Processing Lab for motion-aware memory modeling.  
+- **SAMURAI** by the University of Washington's Information Processing Lab for motion-aware memory modeling.  
 - **DAM (Describe Anything Model)** by NVIDIA for concise natural language descriptions of subject actions or state changes in videos.
 
 ## Citation

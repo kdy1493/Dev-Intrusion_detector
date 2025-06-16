@@ -7,6 +7,8 @@ CADA_STRIDE = 40
 SMALL_WIN_SIZE = 64
 FPS_LIMIT = 10
 
+BROKER_ADDR = "your_broker_address"
+BROKER_PORT = 1883
 
 CSI_TOPICS = [
     "L0382/ESP/1",
