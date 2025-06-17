@@ -41,11 +41,11 @@ class CameraManager:
             self.cap.set(cv2.CAP_PROP_FPS, self.fps)
             self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)  # 버퍼 크기 줄여서 지연 감소
             
-            print(f"✅ 카메라 초기화 완료: {self.width}x{self.height} @ {self.fps}fps")
+            print(f" 카메라 초기화 완료: {self.width}x{self.height} @ {self.fps}fps")
             return True
             
         except Exception as e:
-            print(f"❌ 카메라 초기화 실패: {e}")
+            print(f" 카메라 초기화 실패: {e}")
             return False
     
     def read_frame(self) -> Tuple[bool, Optional[cv2.Mat]]:
@@ -57,7 +57,7 @@ class CameraManager:
     def record_video(self, duration: int = 5, recording_fps: int = 5) -> Optional[Path]:
         """비디오 녹화"""
         if self.cap is None:
-            print("❌ 카메라가 초기화되지 않았습니다.")
+            print(" 카메라가 초기화되지 않았습니다.")
             return None
         
         try:
@@ -86,11 +86,11 @@ class CameraManager:
                 frame_count += 1
             
             vw.release()
-            print(f"✅ [RECORDING] 저장 완료: {vid_path} ({frame_count} 프레임)")
+            print(f" [RECORDING] 저장 완료: {vid_path} ({frame_count} 프레임)")
             return vid_path
             
         except Exception as e:
-            print(f"❌ 녹화 실패: {e}")
+            print(f" 녹화 실패: {e}")
             return None
     
     def add_status_overlay(self, frame: cv2.Mat, recording_active: bool, queue_size: int) -> cv2.Mat:

@@ -40,24 +40,24 @@ def send_recording_signal(bbox_normalized=None, signal_type="manual_trigger", me
         
         if response.status_code == 200:
             result = response.json()
-            print(f"✅ [SUCCESS] {result['message']}")
+            print(f" [SUCCESS] {result['message']}")
             print(f"   Signal Type: {result['signal_type']}")
             print(f"   BBox: {result['bbox_normalized']}")
             return True
         else:
             error_data = response.json()
-            print(f"❌ [ERROR] {error_data.get('message', 'Unknown error')}")
+            print(f" [ERROR] {error_data.get('message', 'Unknown error')}")
             return False
             
     except requests.exceptions.ConnectionError:
-        print("❌ [ERROR] demo.py API 서버에 연결할 수 없습니다.")
+        print(" [ERROR] demo.py API 서버에 연결할 수 없습니다.")
         print("   demo.py가 실행 중인지 확인해주세요.")
         return False
     except requests.exceptions.Timeout:
-        print("❌ [ERROR] API 요청 시간 초과")
+        print(" [ERROR] API 요청 시간 초과")
         return False
     except Exception as e:
-        print(f"❌ [ERROR] API 요청 실패: {e}")
+        print(f" [ERROR] API 요청 실패: {e}")
         return False
 
 def get_system_status():
@@ -67,17 +67,17 @@ def get_system_status():
         
         if response.status_code == 200:
             status = response.json()
-            print("📊 [STATUS]")
+            print(" [STATUS]")
             print(f"   Recording Active: {status['recording_active']}")
             print(f"   Signals in Queue: {status['signals_in_queue']}")
             print(f"   Timestamp: {status['timestamp']}")
             return True
         else:
-            print("❌ [ERROR] 상태 조회 실패")
+            print(" [ERROR] 상태 조회 실패")
             return False
             
     except Exception as e:
-        print(f"❌ [ERROR] 상태 조회 실패: {e}")
+        print(f" [ERROR] 상태 조회 실패: {e}")
         return False
 
 def on_s_key_pressed():
@@ -102,26 +102,26 @@ def on_s_key_pressed():
 
 def on_t_key_pressed():
     """'t' 키가 눌렸을 때 상태 확인"""
-    print("\n📊 시스템 상태를 확인합니다...")
+    print("\n 시스템 상태를 확인합니다...")
     get_system_status()
 
 def test_connection():
     """연결 테스트 - 상태 확인만 수행 (녹화 신호 없음)"""
-    print("🔗 demo.py API 서버와의 연결을 테스트합니다...")
+    print(" demo.py API 서버와의 연결을 테스트합니다...")
     if get_system_status():
-        print("✅ 연결 성공!")
+        print(" 연결 성공!")
         return True
     else:
-        print("❌ 연결 실패!")
+        print(" 연결 실패!")
         return False
 
 def main():
     """메인 함수"""
     print("=" * 60)
-    print("🎮 API 기반 외부 컨트롤러가 시작되었습니다!")
-    print(f"🌐 API 서버: {API_BASE_URL}")
+    print(" API 기반 외부 컨트롤러가 시작되었습니다!")
+    print(f" API 서버: {API_BASE_URL}")
     print()
-    print("📋 사용법:")
+    print(" 사용법:")
     print("  's' 키: 녹화 신호 전송")
     print("  't' 키: 시스템 상태 확인")
     print("  'c' 키: 연결 테스트")
@@ -129,7 +129,7 @@ def main():
     print("=" * 60)
     
     # 초기 연결 테스트
-    print("\n🔄 초기 연결 테스트를 수행합니다...")
+    print("\n 초기 연결 테스트를 수행합니다...")
     time.sleep(1)
     test_connection()
     
@@ -138,7 +138,7 @@ def main():
     keyboard.add_hotkey('t', on_t_key_pressed)
     keyboard.add_hotkey('c', test_connection)
     
-    print("\n✅ 컨트롤러가 준비되었습니다. 키를 눌러보세요!")
+    print("\n 컨트롤러가 준비되었습니다. 키를 눌러보세요!")
     
     try:
         # 프로그램 실행 유지
@@ -146,7 +146,7 @@ def main():
     except KeyboardInterrupt:
         pass
     
-    print("\n👋 API 컨트롤러를 종료합니다.")
+    print("\n API 컨트롤러를 종료합니다.")
 
 if __name__ == "__main__":
     main() 
