@@ -66,9 +66,39 @@ class DAMTensorRTOptimizer:
     def _load_dam_model(self) -> bool:
         """DAM 모델 로드"""
         try:
+            # 먼저 커스텀 모델 등록
+            from dam.model.language_model.llava_llama import LlavaLlamaConfig, LlavaLlamaModel
+            from transformers import AutoConfig, AutoModel
+            
+            # 모델 등록 (중복 등록은 자동으로 무시됨)
+            try:
+                AutoConfig.register("llava_llama", LlavaLlamaConfig)
+                AutoModel.register(LlavaLlamaConfig, LlavaLlamaModel)
+                print(" llava_llama 모델 타입 등록 완료")
+            except Exception as e:
+                print(f" 모델 등록 건너뜀: {e}")
+            
             from dam import DescribeAnythingModel, disable_torch_init
             
             disable_torch_init()
+            
+            print(f" DAM 모델 로드 시작: {self.model_path}")
+            
+            # 설정 파일 먼저 확인
+            try:
+                config = AutoConfig.from_pretrained(self.model_path)
+                print(f" 설정 로드 완료: {config.model_type}")
+                
+                # 중요한 설정값들 확인
+                print(f" 설정 확인:")
+                print(f"   - llm_cfg: {getattr(config, 'llm_cfg', 'None')}")
+                print(f"   - vision_tower_cfg: {getattr(config, 'vision_tower_cfg', 'None')}")
+                print(f"   - mm_projector_cfg: {getattr(config, 'mm_projector_cfg', 'None')}")
+                print(f"   - mm_vision_tower: {getattr(config, 'mm_vision_tower', 'None')}")
+                
+            except Exception as e:
+                print(f" 설정 로드 실패: {e}")
+                return False
             
             self.dam_model = DescribeAnythingModel(
                 model_path=self.model_path,
@@ -84,7 +114,10 @@ class DAMTensorRTOptimizer:
             return True
             
         except Exception as e:
-            self.logger.error(f"DAM 모델 로드 실패: {e}")
+            import traceback
+            print(f" DAM 모델 로드 실패: {e}")
+            print(f" 상세 오류:")
+            traceback.print_exc()
             return False
     
     def _optimize_gpu_memory(self):

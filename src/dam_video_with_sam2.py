@@ -22,6 +22,17 @@ import ast
 import torch
 import numpy as np
 from PIL import Image
+
+# 먼저 커스텀 모델 등록
+from transformers import AutoConfig, AutoModel
+try:
+    from dam.model.language_model.llava_llama import LlavaLlamaConfig, LlavaLlamaModel
+    AutoConfig.register("llava_llama", LlavaLlamaConfig)
+    AutoModel.register(LlavaLlamaConfig, LlavaLlamaModel)
+    print("llava_llama 모델 타입 등록 완료")
+except Exception as e:
+    print(f"커스텀 모델 등록 건너뜀: {e}")
+
 from dam import DescribeAnythingModel, disable_torch_init
 import cv2
 import glob
