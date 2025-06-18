@@ -164,7 +164,7 @@ setup(
         "ultralytics>=8.3.131",
         "hydra-core>=1.3.2",
         "iopath>=0.1.10",
-        "transformers>=4.37.0",
+        "transformers==4.40.2",
         "accelerate>=0.20.0",
         "sentencepiece>=0.1.99",
         "protobuf>=3.20.0",
