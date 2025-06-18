@@ -37,6 +37,12 @@ def process_masks(m_np, disp, frame):
         bbox_coords = (x1, y1, x2, y2)
         cv2.rectangle(disp, (x1,y1), (x2,y2), (0, 0, 255), 2)
         
+        center_x = (x1 + x2) // 2
+        center_y = (y1 + y2) // 2
+        cv2.circle(disp, (center_x, center_y), 4, (0, 0, 255), -1)
+
+        cv2.circle(disp, (w//2, h//2), 4, (0, 0, 255), -1)
+        
     disp = cv2.addWeighted(disp, 0.5, frame, 0.5, 0)
     return bbox_coords
 

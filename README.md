@@ -10,7 +10,8 @@ This repository implements a four-stage end-to-end system for detecting and resp
 
 3. **Real-Time Human Detection & Tracking**  
    - **YOLOv8** for ultra-fast person bounding-box detection  
-   - **SAMURAI** for pixel-precise segmentation, centroid extraction, and PTZ camera control
+   - **SAMURAI** for pixel-precise segmentation, centroid extraction
+   - **PTZ Controller** MQTT pan/tilt commands to the Pi
 4.  **Video Recording & Behavioral Analysis**  
    - **Automated Recording**: Trigger 5-second video clips when suspicious activity is detected  
    - **DAM (Dynamic Action Model)**: Generate natural language descriptions of human actions and behaviors from recorded video segments  
@@ -47,6 +48,7 @@ cd intrusion-detector
 # Install the core package (SAM2 + demo app) in editable mode
 uv pip install -e .
 
+# (Skip if CPU only)
 # If you want to use GPU acceleration (CUDA), you must install PyTorch with the correct CUDA version manually.
 # For example, to install PyTorch with CUDA 12.1, run the following command before installing the rest:
 uv pip install torch==2.3.1 torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
@@ -88,8 +90,27 @@ python scripts/api_controller.py
 
 Note: Currently, the human detection and description systems are not fully integrated. The API controller sends dummy data for demonstration purposes. This integration will be updated in future releases.
 
+### Running the Integrated System
+To run the complete intrusion detection system with human detection and DAM analysis:
+
+1. Start the DAM model server first:
+```bash
+python scripts/demo.py
+```
+
+2. In a separate terminal, start the human detection system:
+```bash
+python demo/app.py
+```
+
+The system will now automatically:
+- Detect humans in the camera feed
+- Track their movements
+- Trigger DAM analysis when stationary behavior is detected
+- Display results in the web interface
+
 ### MQTT Configuration
-To use the CSI-based presence detection feature, you need to configure your MQTT broker settings in `demo/config/mqtt_settings.py`:
+To use the CSI-based presence detection feature, you need to configure your MQTT broker settings in `demo/config/settings.py`:
 
 ```python
 BROKER_ADDR = "your_broker_address"
@@ -104,6 +125,9 @@ You can customize various settings in `demo/config/settings.py`:
 - **Camera Settings**: Change `CAMERA_INDEX` to use different cameras
 - **Model Paths**: Update `YOLO_MODEL_PATH` and `SAM_CHECKPOINT_PATH` to use different model checkpoints
 - **Detection Thresholds**: Adjust `STATIONARY_THRESHOLD` and `MASK_THRESHOLD` to fine-tune detection sensitivity
+
+### PTZ Camera Control
+This project uses a Raspberry Pi 4 + NoIR v2 camera mounted on a pan‑tilt HAT.  The Pi acts as a micro‑streaming server (MJPEG/HTTP) while also receiving PTZ commands over MQTT
 
 ### Acknowledgment
 This project leverages:  

@@ -11,8 +11,8 @@ Wi-Fi CSI MQTT 통신 유틸리티 모듈.
 
 import paho.mqtt.client as mqtt
 import threading
-from demo.config.mqtt_settings import (
-     BROKER_ADDR, BROKER_PORT ,CSI_TOPICS
+from demo.config.settings import (
+    BROKER_ADDR, BROKER_PORT, CSI_TOPICS
 )
 
 

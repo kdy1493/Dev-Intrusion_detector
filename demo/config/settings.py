@@ -28,3 +28,43 @@ MASK_THRESHOLD = 0.5  # confidence threshold for mask generation
 # Camera settings
 CAMERA_INDEX = 0
 CAMERA_BACKEND = cv2.CAP_DSHOW
+
+# Camera streaming settings
+STREAM_URL = "your_camera_url"
+
+# MQTT Broker settings
+BROKER_ADDR = "your_broker_address"
+BROKER_PORT = 1883
+
+# PTZ MQTT settings
+MQTT_PTZ_TOPIC = "ptz/control"
+MQTT_PTZ_CLIENT_ID = "human_app_ptz"
+MQTT_PTZ_KEEPALIVE = 15
+
+# PTZ control settings
+PTZ_INIT_PAN = 120
+PTZ_INIT_TILT = 120
+PTZ_PAN_DIR = -1
+PTZ_TILT_DIR = 1
+PTZ_DEADZONE_PX = 5
+PTZ_MIN_STEP_DEG = 0.05
+PTZ_SMOOTH_ALPHA = 0.40
+
+CSI_TOPIC = ["L0382/ESP/8"]
+# CSI MQTT settings
+CSI_TOPICS = [
+    "L0382/ESP/1",
+    "L0382/ESP/2",
+    "L0382/ESP/3",
+    "L0382/ESP/4",
+    "L0382/ESP/5",
+    "L0382/ESP/6",
+    "L0382/ESP/7",
+    "L0382/ESP/8",
+]
+CSI_INDICES_TO_REMOVE = list(range(21, 32))
+CSI_SUBCARRIERS = 52
+CSI_WINDOW_SIZE = 320
+CSI_STRIDE = 40
+CSI_SMALL_WIN_SIZE = 64
+CSI_FPS_LIMIT = 10
