@@ -155,7 +155,7 @@ def main():
     print(" 모듈 초기화 중...")
     try:
         camera_manager = CameraManager(CAPTURE_DIR, width=1280, height=720, fps=10)
-        if not camera_manager.initialize_camera("CAMERA_FEED_URL"):
+        if not camera_manager.initialize_camera("your_camera_stream_url"):
             print(" 카메라 초기화 실패")
             return
             

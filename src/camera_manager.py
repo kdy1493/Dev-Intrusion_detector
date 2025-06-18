@@ -70,12 +70,21 @@ class CameraManager:
 
         deadline = time.time() + duration
         frames = 0
+        frame_interval = 1.0 / recording_fps  # 프레임 간격 계산
+        next_frame_time = time.time()
+        
         while time.time() < deadline:
-            ret, frame = rec_cap.read()
-            if not ret:
-                break
-            writer.write(cv2.resize(frame, (self.width, self.height)))
-            frames += 1
+            current_time = time.time()
+            if current_time >= next_frame_time:
+                ret, frame = rec_cap.read()
+                if not ret:
+                    break
+                writer.write(cv2.resize(frame, (self.width, self.height)))
+                frames += 1
+                next_frame_time += frame_interval
+            else:
+                # FPS 제어를 위한 짧은 대기
+                time.sleep(0.001)
 
         writer.release(); rec_cap.release()
         print(f"Saved {frames} frames → {out}")
