@@ -1,8 +1,4 @@
-import autorootcwd
-import os
-import time
-import cv2
-import torch, threading
+import autorootcwd, os, time, cv2, torch, threading, requests, threading
 from flask import Flask, render_template, Response, request, jsonify
 from flask_socketio import SocketIO
 from demo.models.detector import HumanDetector
@@ -22,6 +18,8 @@ from src.CADA.CADA_process import SlidingCadaProcessor
 from demo.utils.mqtt_manager import MQTTManager
 from demo.ptz.mqtt_publisher import MQTTPublisher
 from demo.ptz.ptz_control import PTZController
+
+DEMO_API = "http://localhost:5100/trigger_recording"
 
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
@@ -52,6 +50,22 @@ os.environ["OPENCV_FFMPEG_CAPTURE_OPTIONS"] = FFMPEG_OPTS
 STREAM_URL = STREAM_URL
 
 socketio = SocketIO(async_mode="threading")
+
+def post_stationary_bbox(bbox, frame_size):
+    x1, y1, x2, y2 = bbox
+    w, h = frame_size
+    bbox_norm = [x1/w, y1/h, x2/w, y2/h]
+    payload = {
+        "signal_type": "stationary_behavior",
+        "bbox_normalized": bbox_norm,
+        "metadata": {"source": "app.py"}
+    }
+
+    try:
+        requests.post(DEMO_API, json=payload, timeout=1)
+        print(f"[DAM] Sent stationary bbox {bbox_norm}")
+    except Exception as e:
+        print(f"[DAM] POST failed: {e}")
 
 class FrameGrabber(threading.Thread):
     def __init__(self, url: str):
@@ -197,6 +211,7 @@ class HumanDetectionApp:
                 if self.tracker.check_stationary(bbox_for_ptz, now):
                     self.alert_manager.send_alert(AlertCodes.STATIONARY_BEHAVIOR,
                                                   "STATIONARY BEHAVIOR DETECTED: analysis required")
+                    threading.Thread(target=post_stationary_bbox, args=(bbox_for_ptz, (w, h)), daemon=True).start()
             elif self.was_tracking:
                 self.alert_manager.send_alert(AlertCodes.PERSON_LOST, "PERSON_LOST")
                 self.reset_state()

@@ -26,7 +26,7 @@ from flask import Flask, request, jsonify
 DURATION_SEC = 5
 FPS = 5
 API_HOST = 'localhost'
-API_PORT = 5000
+API_PORT = 5100
 
 # 프로젝트 루트 경로
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -155,16 +155,15 @@ def main():
     print(" 모듈 초기화 중...")
     try:
         camera_manager = CameraManager(CAPTURE_DIR, width=1280, height=720, fps=10)
+        if not camera_manager.initialize_camera("CAMERA_FEED_URL"):
+            print(" 카메라 초기화 실패")
+            return
+            
         dam_analyzer = DAMAnalyzer(DAM_SCRIPT, temperature=0.1, top_p=0.15)
         log_manager = LogManager(LOG_FILE)
         print("모듈 초기화 완료")
     except Exception as e:
         print(f"모듈 초기화 실패: {e}")
-        return
-    
-    # 카메라 초기화
-    if not camera_manager.initialize_camera():
-        print(" 카메라 초기화 실패")
         return
     
     print("=== API 기반 녹화 시스템 ===")
