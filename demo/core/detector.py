@@ -115,11 +115,11 @@ class DetectionProcessor:
         self.tracker = HumanTracker()
         self.alert_manager = AlertManager()
         # ptz/trigger OFF 발행용 MQTT 퍼블리셔
-        self._trigger_cli = paho.Client()
-        try:
-            self._trigger_cli.connect(BROKER_ADDR, BROKER_PORT, 60)
-        except Exception as e:
-            print(f"[MQTT] trigger_cli connect 실패: {e}")
+        # self._trigger_cli = paho.Client()
+        # try:
+        #     self._trigger_cli.connect(BROKER_ADDR, BROKER_PORT, 60)
+        # except Exception as e:
+        #     print(f"[MQTT] trigger_cli connect 실패: {e}")
         self.reset_state()
         
     def reset_state(self):
@@ -187,13 +187,13 @@ class DetectionProcessor:
                         args=(bbox_for_ptz, (w, h)), 
                         daemon=True
                     ).start()
-            elif self.was_tracking:
-                self.alert_manager.send_alert(AlertCodes.PERSON_LOST, "PERSON_LOST")
-                # 스트림 OFF 트리거 전송
-                try:
-                    self._trigger_cli.publish("ptz/trigger", "0")
-                except Exception as e:
-                    print(f"[MQTT] PERSON_LOST → OFF publish 실패: {e}")
-                self.reset_state()
+            # elif self.was_tracking:
+            #     self.alert_manager.send_alert(AlertCodes.PERSON_LOST, "PERSON_LOST")
+            #     # 스트림 OFF 트리거 전송
+            #     try:
+            #         self._trigger_cli.publish("ptz/trigger", "0")
+            #     except Exception as e:
+            #         print(f"[MQTT] PERSON_LOST → OFF publish 실패: {e}")
+            #     self.reset_state()
 
         return disp, bbox_for_ptz 

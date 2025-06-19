@@ -117,15 +117,19 @@
         const thrIdx = actIdx+1;
         const flgIdx = actIdx+2;
         Plotly.addTraces(gd,[actTr,thrTr,flgTr]);
-        trMap[t]={actIdx,thrIdx,flgIdx};
+        trMap[t]={actIdx,thrIdx,flgIdx,lastFlag:yF};
         Plotly.relayout(gd,{title:""});
       }else{
         const {actIdx,thrIdx,flgIdx}=trMap[t];
         Plotly.extendTraces(gd,{x:[[x]],y:[[yA]]},[actIdx],MAXPTS);
         Plotly.extendTraces(gd,{x:[[x]],y:[[yT]]},[thrIdx],MAXPTS);
         Plotly.extendTraces(gd,{x:[[x]],y:[[yF]]},[flgIdx],MAXPTS);
+        
+        if(yF > 0 && trMap[t].lastFlag === 0) {
+          flashOverlay();
+        }
+        trMap[t].lastFlag = yF;
       }
-      if(yF>0) flashOverlay();
     });
 
     function requestRedetect() {
@@ -135,7 +139,7 @@
     const overlay = document.getElementById("alert-overlay");
     function flashOverlay(){
       overlay.classList.add("active");
-      setTimeout(()=>overlay.classList.remove("active"),150);
+      setTimeout(()=>overlay.classList.remove("active"), 500);
     }
   </script>
 </body>
