@@ -11,16 +11,20 @@ from demo.config.settings import (
     MASK_THRESHOLD, DEMO_API
 )
 from demo.utils.alerts import AlertManager, AlertCodes
+import torch
 
 class HumanDetector:
-    
     def __init__(self):
         self.model = YOLO(YOLO_MODEL_PATH)
+        self._warm_up()
+
+    def _warm_up(self):
+        dummy = torch.zeros(1, 3, 640, 640, device=DEVICE)
+        _ = self.model.predict(dummy, device=DEVICE, verbose=False) 
     
     def detect(self, frame):
         persons = []
         results = self.model.predict(frame, classes=[0], device=DEVICE, verbose=False)
-
         max_conf = 0
         best_box = None
         
@@ -39,20 +43,23 @@ class HumanDetector:
 
 
 class HumanTracker:
-    
     def __init__(self):
-        self.tracker = None
-        self.last_center = None
-        self.stationary_timer_start = None
-    
-    def initialize(self, frame, persons):
         self.tracker = build_sam2_object_tracker(
-            num_objects=len(persons),
+            num_objects=1,
             config_file=SAM_CONFIG_PATH,
             ckpt_path=SAM_CHECKPOINT_PATH,
             device=DEVICE,
             verbose=False
         )
+        self._warm_up()
+        self.last_center = None
+        self.stationary_timer_start = None
+
+    def _warm_up(self):
+        dummy = np.zeros((256, 256, 3), np.uint8)
+        _ = self.tracker.track_all_objects(img=dummy)
+
+    def initialize(self, frame, persons):
         self.tracker.track_new_object(
             img=cv2.cvtColor(frame, cv2.COLOR_BGR2RGB),
             box=np.array(persons)
@@ -102,7 +109,6 @@ class HumanTracker:
 
 
 class DetectionProcessor:
-    
     def __init__(self):
         self.detector = HumanDetector()
         self.tracker = HumanTracker()

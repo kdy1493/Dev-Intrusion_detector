@@ -3,6 +3,7 @@ import cv2
 import time
 import os
 import numpy as np
+import threading
 from flask import Flask, Response, render_template, jsonify
 from flask_socketio import SocketIO
 from demo.core.stream import StreamManager
@@ -39,11 +40,16 @@ class HumanDetectionApp:
         self.ptz_service = PTZService()
 
         self.ptz_initialized = False
+        threading.Thread(target=self._heavy_init, daemon=True).start()
 
         self._start_services()
         
         self._setup_routes()
         self._register_socketio_handlers()
+
+    def _heavy_init(self):
+        _ = DetectionProcessor()
+        print("[INIT] models pre-loaded")
         
     def _start_services(self):
         self.mqtt_service.start()
