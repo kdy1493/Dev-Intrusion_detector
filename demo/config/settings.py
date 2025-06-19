@@ -49,6 +49,9 @@ PTZ_DEADZONE_PX = 5
 PTZ_MIN_STEP_DEG = 0.05
 PTZ_SMOOTH_ALPHA = 0.40
 
+# DAM API settings
+DEMO_API = "http://localhost:5100/trigger_recording"
+
 CSI_TOPIC = ["L0382/ESP/8"]
 # CSI MQTT settings
 CSI_TOPICS = [

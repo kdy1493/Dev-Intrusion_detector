@@ -1,11 +1,13 @@
 import time, threading
 from typing import Union
 import paho.mqtt.client as mqtt
+import sys
+import os
+
 from demo.config.settings import (
     BROKER_ADDR, BROKER_PORT, MQTT_PTZ_TOPIC,
     MQTT_PTZ_CLIENT_ID, MQTT_PTZ_KEEPALIVE
 )
-
 
 class MQTTPublisher:
     def __init__(

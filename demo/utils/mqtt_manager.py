@@ -1,7 +1,7 @@
 import time
 from flask_socketio import SocketIO
-from CADA.mqtt_utils import start_csi_mqtt_thread
-from CADA.CADA_process import parse_and_normalize_payload
+from src.CADA.mqtt_utils import start_csi_mqtt_thread
+from src.CADA.CADA_process import parse_and_normalize_payload
 
 class MQTTManager:
     def __init__(self, socketio: SocketIO, topics: list, broker_address: str, broker_port: int,

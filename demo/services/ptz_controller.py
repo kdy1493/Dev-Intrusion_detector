@@ -1,7 +1,7 @@
 from __future__ import annotations
 import time
 from typing import Optional, Tuple
-from demo.ptz.mqtt_publisher import MQTTPublisher
+from demo.services.mqtt_publisher import MQTTPublisher
 
 
 class PTZController:
