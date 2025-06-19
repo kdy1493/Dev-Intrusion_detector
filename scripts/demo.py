@@ -7,6 +7,7 @@ Demo Script - API-based Recording System
 import sys
 import time
 import warnings
+import requests
 from pathlib import Path
 from threading import Thread
 from datetime import datetime
@@ -27,6 +28,8 @@ DURATION_SEC = 5
 FPS = 5
 API_HOST = 'localhost'
 API_PORT = 5100
+WEB_HOST = 'localhost'
+WEB_PORT = 5000
 
 # 프로젝트 루트 경로
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -101,6 +104,30 @@ def run_flask_api():
     app.run(host=API_HOST, port=API_PORT, debug=False, use_reloader=False)
 
 # -----------------------------------------------------------------------------
+# Web Interface Communication
+# -----------------------------------------------------------------------------
+def send_analysis_result_to_web(description: str, bbox_normalized: List[float], signal_type: str = "analysis"):
+    """분석 결과를 웹 인터페이스에 전송"""
+    try:
+        url = f"http://{WEB_HOST}:{WEB_PORT}/analysis_result"
+        data = {
+            'description': description,
+            'bbox_normalized': bbox_normalized,
+            'signal_type': signal_type
+        }
+        
+        response = requests.post(url, json=data, timeout=5)
+        if response.status_code == 200:
+            print(f"[WEB] 분석 결과 전송 성공: {description[:50]}...")
+        else:
+            print(f"[WEB ERROR] 분석 결과 전송 실패: {response.status_code} - {response.text}")
+            
+    except requests.exceptions.RequestException as e:
+        print(f"[WEB ERROR] 웹 인터페이스 연결 실패: {e}")
+    except Exception as e:
+        print(f"[WEB ERROR] 분석 결과 전송 중 오류: {e}")
+
+# -----------------------------------------------------------------------------
 # Signal Processing
 # -----------------------------------------------------------------------------
 def process_external_signals():
@@ -127,6 +154,9 @@ def process_external_signals():
                             # 로그 저장
                             log_manager.append_log(f" {description}")
                             print(f"[완료] 분석 결과: {description}")
+                            
+                            # 웹 인터페이스에 결과 전송
+                            send_analysis_result_to_web(description, signal.bbox_normalized, signal.signal_type)
                         
                 except Exception as e:
                     print(f"[오류] 녹화/분석 실패: {e}")
@@ -155,7 +185,7 @@ def main():
     print(" 모듈 초기화 중...")
     try:
         camera_manager = CameraManager(CAPTURE_DIR, width=1280, height=720, fps=10)
-        if not camera_manager.initialize_camera("your_camera_stream_url"):
+        if not camera_manager.initialize_camera("http://172.20.10.12:5001/video_feed"):
             print(" 카메라 초기화 실패")
             return
             
@@ -233,6 +263,10 @@ def analyze_video_with_external_bbox(video_path: str, bbox_normalized: List[floa
         # 로그 저장
         if log_manager and description:
             log_manager.append_log(f"외부 분석 완료: {description}")
+        
+        # 웹 인터페이스에 결과 전송
+        if description:
+            send_analysis_result_to_web(description, bbox_normalized, "external_analysis")
         
         return description
     except Exception as e:

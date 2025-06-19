@@ -4,7 +4,7 @@ import time
 import os
 import numpy as np
 import threading
-from flask import Flask, Response, render_template, jsonify
+from flask import Flask, Response, render_template, jsonify, request
 from flask_socketio import SocketIO
 from demo.core.stream import StreamManager
 from demo.core.detector import DetectionProcessor
@@ -89,6 +89,41 @@ class HumanDetectionApp:
         @self.app.route('/timestamp')
         def timestamp():
             return jsonify({'timestamp': self.get_last_timestamp()})
+        
+        @self.app.route('/analysis_result', methods=['POST'])
+        def analysis_result():
+            try:
+                data = request.get_json()
+                description = data.get('description', '')
+                bbox_normalized = data.get('bbox_normalized', [])
+                signal_type = data.get('signal_type', 'analysis')
+                
+                if description:
+                    message = f"analysis result: {description}"
+                    if bbox_normalized:
+                        message += f" (BBox: {bbox_normalized})"
+                    
+                    self.detection_processor.alert_manager.send_alert(
+                        AlertCodes.INTRUSION_DETECTED, 
+                        message
+                    )
+                    
+                    return jsonify({
+                        'status': 'success',
+                        'message': 'Analysis result received and sent to web interface'
+                    }), 200
+                else:
+                    return jsonify({
+                        'status': 'error',
+                        'message': 'No description provided'
+                    }), 400
+                    
+            except Exception as e:
+                print(f"[WEB ERROR] : {e}")
+                return jsonify({
+                    'status': 'error',
+                    'message': str(e)
+                }), 500
         
     def _register_socketio_handlers(self):
         @self.socketio.on("connect", namespace="/csi")
