@@ -30,11 +30,11 @@ CAMERA_INDEX = 0
 CAMERA_BACKEND = cv2.CAP_DSHOW
 
 # Camera streaming settingsAdd commentMore actions
-STREAM_URL = "http://172.20.10.12:5001/video_feed"
+STREAM_URL = "your_camera_url"
 
 # MQTT Broker settings
-BROKER_ADDR = "61.252.57.136"
-BROKER_PORT = 4991
+BROKER_ADDR = "your_broker_address"
+BROKER_PORT = 1883
 # PTZ MQTT settings
 MQTT_PTZ_TOPIC = "ptz/control"
 MQTT_PTZ_CLIENT_ID = "human_app_ptz"
