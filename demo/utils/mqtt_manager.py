@@ -1,8 +1,56 @@
+"""
+mqtt_manager.py
+----
+MQTT manager for CSI data processing.
+
+Key Functions
+----
+• start_csi_mqtt_thread: Run CSI MQTT client in background thread.
+• MQTTManager: Main class for managing MQTT connections and message handling.
+"""
+
+import autorootcwd
 import time
 from flask_socketio import SocketIO
-from src.CADA.mqtt_utils import start_csi_mqtt_thread
 from src.CADA.CADA_process import parse_and_normalize_payload
 import paho.mqtt.client as paho
+import paho.mqtt.client as mqtt
+import threading
+from demo.config.settings import (
+    BROKER_ADDR, BROKER_PORT, CSI_TOPICS
+)
+
+# === MQTT background thread ===
+def start_csi_mqtt_thread(message_handler, topics=None, broker_address=None, broker_port=None, daemon=True):
+    """
+    Run CSI MQTT client in background thread.
+    Automatically subscribes to given topics and delivers decoded payload to message_handler.
+    """
+    topics = topics or CSI_TOPICS
+    broker_address = broker_address or BROKER_ADDR
+    broker_port = broker_port or BROKER_PORT
+
+    def on_connect(client, userdata, flags, rc):
+        if rc == 0:
+            print("MQTT connected.")
+            for topic in topics:
+                client.subscribe(topic)
+                print(f"Subscribed to: {topic}")
+        else:
+            print(f"MQTT connection failed. Code: {rc}")
+
+    def on_message(client, userdata, msg):
+        message_handler(msg.topic, msg.payload.decode())
+
+    client = mqtt.Client()
+    client.on_connect = on_connect
+    client.on_message = on_message
+    client.connect(broker_address, broker_port, 60)
+
+    thread = threading.Thread(target=client.loop_forever, daemon=daemon)
+    thread.start()
+
+    return thread, client
 
 class MQTTManager:
     def __init__(self, socketio: SocketIO, topics: list, broker_address: str, broker_port: int,
@@ -25,10 +73,11 @@ class MQTTManager:
         self.trigger_cli.subscribe("ptz/trigger")
         self.trigger_cli.loop_start()
 
-        # --- NEW: 트리거 상태 관리 ------------------------
+      
+        # --- NEW: Trigger state management ------------------------
         self._last_trigger_state = 0   # 0=OFF, 1=ON
-        self._last_activity_time = 0.0 # 최근 flag>0 시각
-        self._off_delay_sec = 2.0      # inactivity 후 OFF 전송 지연
+        self._last_activity_time = 0.0 # Recent flag>0 time
+        self._off_delay_sec = 2.0      # OFF transmission delay after inactivity
 
     def start(self):
         if self._mqtt_started:
@@ -91,3 +140,4 @@ class MQTTManager:
     #         self._last_trigger_state = 1
     #     elif payload == "0":
     #         self._last_trigger_state = 0 
+

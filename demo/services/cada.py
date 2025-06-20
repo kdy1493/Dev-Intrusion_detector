@@ -1,5 +1,5 @@
-from src.CADA.realtime_csi_handler_utils import create_buffer_manager, load_calibration_data
-from src.CADA.CADA_process import SlidingCadaProcessor
+from src.CADA.csi_buffer_utils import RealtimeCSIBufferManager 
+from src.CADA.CADA_process import SlidingCadaProcessor, load_calibration_data
 from demo.utils.mqtt_manager import MQTTManager
 from demo.config.settings import (
     CSI_TOPIC, CSI_WINDOW_SIZE, CSI_STRIDE, CSI_SMALL_WIN_SIZE,
@@ -21,7 +21,7 @@ class CADAService:
         if self._initialized:
             return
             
-        self.buf_mgr = create_buffer_manager(CSI_TOPIC)
+        self.buf_mgr = RealtimeCSIBufferManager(CSI_TOPIC)
         load_calibration_data(CSI_TOPIC, self.buf_mgr.mu_bg_dict, self.buf_mgr.sigma_bg_dict)
         
         for topic in CSI_TOPIC:
@@ -31,8 +31,6 @@ class CADAService:
             topic: SlidingCadaProcessor(
                 topic=topic,
                 buffer_manager=self.buf_mgr,
-                mu_bg_dict=self.buf_mgr.mu_bg_dict,
-                sigma_bg_dict=self.buf_mgr.sigma_bg_dict,
                 window_size=CSI_WINDOW_SIZE,
                 stride=CSI_STRIDE,
                 small_win_size=CSI_SMALL_WIN_SIZE,
