@@ -89,6 +89,15 @@
       updateStatus(code);
     };
 
+    // --- Analysis Results Handler ------------------------------------------
+    async function handleAnalysisResult(event) {
+      const response = await fetch("/analysis_result");
+      if (response.ok) {
+        const data = await response.json();
+        addLogEntry("분석", data.message);
+      }
+    }
+
     // --- CSI Plot (SocketIO + Plotly) ---------------------------------
     const socket = io("/csi");
     const gd     = document.getElementById("plots");

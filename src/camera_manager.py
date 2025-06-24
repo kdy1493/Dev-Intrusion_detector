@@ -28,6 +28,7 @@ class CameraManager:
 
         self.stream_url: str | None = None
         self.cap: cv2.VideoCapture | None = None  # live preview
+        self.is_initialized: bool = False  # 카메라 초기화 상태
 
     # ────────────────────────── I/O ──────────────────────────
     def initialize_camera(self, stream_url: str) -> bool:
@@ -35,6 +36,7 @@ class CameraManager:
         self.cap = cv2.VideoCapture(stream_url, cv2.CAP_FFMPEG)
         self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
         ok = self.cap.isOpened()
+        self.is_initialized = ok  # 초기화 상태 업데이트
         if ok:
             print(f"Camera ready: {self.width}×{self.height}@{self.fps}  ({stream_url})")
         else:
@@ -115,6 +117,8 @@ class CameraManager:
     def release(self) -> None:
         if self.cap is not None:
             self.cap.release()
+            self.cap = None
+            self.is_initialized = False  # 초기화 상태 해제
         cv2.destroyAllWindows()
 
     def __del__(self) -> None:
