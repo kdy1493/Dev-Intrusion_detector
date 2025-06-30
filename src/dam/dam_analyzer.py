@@ -42,7 +42,7 @@ class DAMAnalyzer:
     def _initialize_tensorrt(self):
         """TensorRT 최적화기 초기화"""
         try:
-            from dam_tensorrt_optimizer import create_optimized_dam_analyzer
+            from .dam_tensorrt_optimizer import create_optimized_dam_analyzer
             
             print(" TensorRT 최적화 초기화 중...")
             self.tensorrt_optimizer = create_optimized_dam_analyzer(
@@ -242,7 +242,7 @@ class DAMAnalyzer:
             self._initialize_tensorrt()
         elif force_rebuild and self.tensorrt_optimizer:
             try:
-                from dam_tensorrt_optimizer import create_optimized_dam_analyzer
+                from .dam_tensorrt_optimizer import create_optimized_dam_analyzer
                 self.tensorrt_optimizer = create_optimized_dam_analyzer(
                     model_path="nvidia/DAM-3B-Video",
                     cache_dir=self.tensorrt_cache_dir,

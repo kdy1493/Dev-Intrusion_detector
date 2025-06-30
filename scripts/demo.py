@@ -12,10 +12,10 @@ from threading import Thread
 from datetime import datetime
 from typing import List, Dict
 # 모듈 import를 위한 경로 추가
-sys.path.append(str(Path(__file__).resolve().parent.parent / "src"))
-from camera_manager import CameraManager
-from dam_analyzer import DAMAnalyzer
-from log_manager import LogManager
+sys.path.append(str(Path(__file__).resolve().parent.parent / "src/dam"))
+from dam.camera_manager import CameraManager
+from dam.dam_analyzer import DAMAnalyzer
+from dam.log_manager import LogManager
 from flask import Flask, request, jsonify
 # -----------------------------------------------------------------------------
 # Configuration
@@ -28,7 +28,7 @@ WEB_HOST = 'localhost'
 WEB_PORT = 5000
 # 프로젝트 루트 경로
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-DAM_SCRIPT = PROJECT_ROOT / "src" / "dam_video_with_sam2.py"
+DAM_SCRIPT = PROJECT_ROOT / "src" / "dam" / "dam_video_with_sam2.py"
 CAPTURE_DIR = PROJECT_ROOT / "captures"
 LOG_FILE = PROJECT_ROOT / "action_log.txt"
 # -----------------------------------------------------------------------------

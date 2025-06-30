@@ -67,7 +67,7 @@ class DAMTensorRTOptimizer:
         """DAM 모델 로드"""
         try:
             # 먼저 커스텀 모델 등록
-            from dam.model.language_model.llava_llama import LlavaLlamaConfig, LlavaLlamaModel
+            from .model.language_model.llava_llama import LlavaLlamaConfig, LlavaLlamaModel
             from transformers import AutoConfig, AutoModel
             
             # 모델 등록 (중복 등록은 자동으로 무시됨)
@@ -78,7 +78,7 @@ class DAMTensorRTOptimizer:
             except Exception as e:
                 print(f" 모델 등록 건너뜀: {e}")
             
-            from dam import DescribeAnythingModel, disable_torch_init
+            from . import DescribeAnythingModel, disable_torch_init
             
             disable_torch_init()
             
