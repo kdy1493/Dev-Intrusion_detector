@@ -13,6 +13,11 @@ from demo.services.mqtt import MQTTService
 from demo.services.ptz import PTZService
 from demo.utils.alerts import AlertManager, AlertCodes
 from demo.config.settings import HOST, PORT, DEBUG
+
+# ----- YOLO AND GATE ADDITION START -----
+from demo.utils.yolo_validationcamera import Yolo_ValidationCamera
+# ----- YOLO AND GATE ADDITION END -----
+
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 FFMPEG_OPTS = (
     "fflags nobuffer;"
@@ -21,6 +26,7 @@ FFMPEG_OPTS = (
     "analyzeduration 0"
 )
 os.environ["OPENCV_FFMPEG_CAPTURE_OPTIONS"] = FFMPEG_OPTS
+
 class HumanDetectionApp:
     def __init__(self):
         self.app = Flask(__name__,
@@ -33,16 +39,37 @@ class HumanDetectionApp:
         self.mqtt_service = MQTTService(self.stream_manager)
         self.ptz_service = PTZService()
         self.ptz_initialized = False
+        
+        # ----- YOLO AND GATE ADDITION START -----
+        # YOLO 검증 카메라 초기화
+        self.yolo_validation_camera = None
+        # ----- YOLO AND GATE ADDITION END -----
+        
         threading.Thread(target=self._heavy_init, daemon=True).start()
         self._start_services()
         self._setup_routes()
         self._register_socketio_handlers()
+        
     def _heavy_init(self):
         _ = DetectionProcessor()
         print("[INIT] models pre-loaded")
+        
+        # ----- YOLO AND GATE ADDITION START -----
+        # YOLO 검증 카메라 시작
+        try:
+            self.yolo_validation_camera = Yolo_ValidationCamera()
+            if self.yolo_validation_camera.initialize():
+                print("[INIT] YOLO validation camera started")
+            else:
+                print("[INIT] Failed to start YOLO validation camera")
+        except Exception as e:
+            print(f"[INIT] YOLO validation camera error: {e}")
+        # ----- YOLO AND GATE ADDITION END -----
+        
     def _start_services(self):
         self.mqtt_service.start()
         self.cada_service.start()
+        
     def _setup_routes(self):
         @self.app.route('/')
         def index():
@@ -103,6 +130,7 @@ class HumanDetectionApp:
                     'status': 'error',
                     'message': str(e)
                 }), 500
+                
     def _register_socketio_handlers(self):
         @self.socketio.on("connect", namespace="/csi")
         def on_connect():
@@ -112,11 +140,13 @@ class HumanDetectionApp:
         @self.socketio.on("disconnect", namespace="/csi")
         def on_disconnect():
             print("[SocketIO] Client disconnected")
+            
     def _initialize_ptz_if_needed(self, frame):
         if not self.ptz_initialized and frame is not None:
             h, w = frame.shape[:2]
             self.ptz_service.initialize(w, h)
             self.ptz_initialized = True
+            
     def process_frame(self, frame):
         if frame is None:
             return None
@@ -125,6 +155,7 @@ class HumanDetectionApp:
         if self.ptz_initialized:
             self.ptz_service.update(bbox_for_ptz)
         return processed_frame
+        
     def gen_frames(self):
         while True:
             if not self.stream_manager.is_active():
@@ -145,14 +176,26 @@ class HumanDetectionApp:
                 if ok:
                     yield (b'--frame\r\nContent-Type: image/jpeg\r\n\r\n' +
                            buf.tobytes() + b'\r\n')
+                           
     def get_stream_generator(self):
         return self.gen_frames()
+        
     def get_last_timestamp(self):
         return self.detection_processor.last_timestamp
+        
     def force_redetection(self):
         return self.detection_processor.force_redetection()
+        
     def run(self):
-        self.app.run(host=HOST, port=PORT, debug=DEBUG)
+        # ----- YOLO AND GATE ADDITION START -----
+        try:
+            self.app.run(host=HOST, port=PORT, debug=DEBUG)
+        finally:
+            # 서버 종료 시 YOLO 검증 카메라 정리
+            if self.yolo_validation_camera:
+                self.yolo_validation_camera.release()
+        # ----- YOLO AND GATE ADDITION END -----
+
 if __name__ == "__main__":
     app = HumanDetectionApp()
     app.run()
