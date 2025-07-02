@@ -38,7 +38,7 @@ class MQTTPublisher:
 
     def _on_connect(self, *_):
         self.connected = True
-        print(f"[MQTT] Connected → {self.broker_addr}:{self.broker_port}")
+        #print(f"[MQTT] Connected → {self.broker_addr}:{self.broker_port}")
 
         for axis in ("pan", "tilt"):
             if self._pending[axis] is not None:
@@ -46,7 +46,7 @@ class MQTTPublisher:
 
     def _on_disconnect(self, *_):
         self.connected = False
-        print("[MQTT] Disconnected – auto-reconnect")
+        #print("[MQTT] Disconnected – auto-reconnect")
 
     def _watchdog(self):
         while True:
