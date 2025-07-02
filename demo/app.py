@@ -60,6 +60,8 @@ class HumanDetectionApp:
             self.yolo_validation_camera = Yolo_ValidationCamera()
             if self.yolo_validation_camera.initialize():
                 print("[INIT] YOLO validation camera started")
+                # YOLO 검증 카메라를 백그라운드에서 실행
+                threading.Thread(target=self._run_yolo_validation, daemon=True).start()
             else:
                 print("[INIT] Failed to start YOLO validation camera")
         except Exception as e:
@@ -195,6 +197,26 @@ class HumanDetectionApp:
             if self.yolo_validation_camera:
                 self.yolo_validation_camera.release()
         # ----- YOLO AND GATE ADDITION END -----
+
+    # ----- YOLO AND GATE ADDITION START -----
+    def _run_yolo_validation(self):
+        """YOLO 검증 카메라를 백그라운드에서 지속적으로 실행"""
+        print("[YOLO] Background validation started")
+        while True:
+            try:
+                if self.yolo_validation_camera and self.yolo_validation_camera.is_initialized:
+                    # 사람 검출 상태 확인 (MQTT 발행 포함)
+                    detection_status = self.yolo_validation_camera.get_person_detection_status()
+                    
+                    # 검출 상태 로깅 (선택사항)
+                    if detection_status == 1:
+                        print("[YOLO] Person detected - MQTT published")
+                    
+                time.sleep(0.5)  # 0.5초 간격으로 검출
+            except Exception as e:
+                print(f"[YOLO] Validation error: {e}")
+                time.sleep(1.0)  # 에러 시 1초 대기
+    # ----- YOLO AND GATE ADDITION END -----
 
 if __name__ == "__main__":
     app = HumanDetectionApp()
