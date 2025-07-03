@@ -25,6 +25,7 @@ class MQTTPublisher:
         self.connected = False
         self._last_sent = {"pan": None, "tilt": None}
         self._pending   = {"pan": None, "tilt": None}
+        self.running = True
 
         self.client = mqtt.Client(client_id=client_id, clean_session=True)
         self.client.on_connect    = self._on_connect
@@ -35,6 +36,14 @@ class MQTTPublisher:
         self.client.loop_start()
 
         threading.Thread(target=self._watchdog, daemon=True).start()
+
+    def stop(self):
+        """MQTT Publisher를 완전히 중지합니다."""
+        self.running = False
+        if self.client:
+            self.client.loop_stop()
+            self.client.disconnect()
+        print("[MQTT Publisher] Stopped.")
 
     def _on_connect(self, *_):
         self.connected = True
@@ -49,7 +58,7 @@ class MQTTPublisher:
         #print("[MQTT] Disconnected – auto-reconnect")
 
     def _watchdog(self):
-        while True:
+        while self.running:
             if not self.client.is_connected():
                 try:
                     self.client.reconnect_async()
@@ -74,7 +83,7 @@ class MQTTPublisher:
         rc = self.client.publish(self.topic, payload, qos=1)[0]
         if rc == mqtt.MQTT_ERR_SUCCESS:
             self._last_sent[axis] = ang
-            print(f"[PTZ] PTZ Command: {payload}")
+            # print(f"[PTZ] PTZ Command: {payload}")
         else:
             print(f"[MQTT] Publish failed (rc={rc})")
 
@@ -103,5 +112,4 @@ if __name__ == "__main__":
             pub.publish("tilt", 110)
             time.sleep(0.3)
     except KeyboardInterrupt:
-        pub.client.loop_stop()
-        pub.client.disconnect()
+        pub.stop()

@@ -30,7 +30,7 @@ CAMERA_INDEX = 0
 CAMERA_BACKEND = cv2.CAP_DSHOW
 
 # Camera streaming settingsAdd commentMore actions
-STREAM_URL = "http://172.20.10.12:5001/video_feed"
+STREAM_URL = 1  # 1번 인덱스 카메라 사용
 BROKER_ADDR = "61.252.57.136"
 BROKER_PORT = 4991
 

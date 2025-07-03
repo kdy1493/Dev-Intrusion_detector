@@ -48,71 +48,54 @@ class MQTTService:
             print(f"[MQTT] Unexpected disconnection (rc={rc})")
         # 자동 재연결이 설정되어 있으므로 별도 처리 불필요
 
-#  기존 코드 주석 처리
-    # def _on_message(self, client, userdata, message):
-    #     payload = message.payload.decode().strip()
-    #     print(f"[MQTT] Received message: '{payload}' (stream_active: {self.stream_manager.is_active()})")
-
-    #     now = int(time.time())
-        
-    #     if payload == "1":
-    #         print("debug")
-    #         if not self.stream_manager.is_active():
-    #             if now - self.last_trigger_time < 3:
-    #                 self.last_trigger_time = now
-    #                 return
-    #             else:
-    #                 # self.last_trigger_time = now
-    #                 print("[TRIGGER] 1 → stream ON")
-    #                 threading.Thread(target=self._send_stream_on, daemon=True).start()
-    #                 self.stream_manager.start_stream()
-    #                 self.last_trigger_time = now
-            
-    #         else:
-    #             if now - self.last_trigger_time < 3:
-    #                 self.last_trigger_time = now
-    #                 return
-    #             else:
-    #                 print(f"[TRIGGER] stream OFF")
-    #                 threading.Thread(target=self._send_stream_off, daemon=True).start()
-    #                 self.stream_manager.stop_stream()
-    #                 self.last_trigger_time = now
-
-    #     elif payload == "0" and self.stream_manager.is_active():
-    #         print("[TRIGGER] 0 → stream OFF")
-    #         #threading.Thread(target=self._send_stream_off, daemon=True).start()
-    #         self.stream_manager.stop_stream()
-    #         self.last_trigger_time = now
-
-    #     else:
-    #         print(f"[MQTT] Ignored message: payload='{payload}', stream_active={self.stream_manager.is_active()}")
-        
-        
     def _on_message(self, client, userdata, message):
-        # ----- YOLO AND GATE ADDITION START -----
         topic = message.topic
         payload = message.payload.decode().strip()
         now = int(time.time())
-        
-        print(f"[MQTT] Received '{payload}' on topic '{topic}' (stream_active: {self.stream_manager.is_active()})")
-        
-        # CSI 신호 처리
+
+        # 1. 수신된 메시지에 따라 각 플래그의 상태를 먼저 업데이트합니다.
         if topic == "ptz/trigger":
             self._handle_csi_signal(payload, now)
-        
-        # YOLO 검증 신호 처리
         elif topic == "yolo/validation":
             self._handle_yolo_signal(payload, now)
         
-        # AND Gate 평가
-        self._evaluate_and_gate(now)
-        # ----- YOLO AND GATE ADDITION END -----
+        is_streaming = self.stream_manager.is_active()
+        print(f"[AND] CSI={self.csi_flag}, YOLO={self.yolo_flag}, Streaming={is_streaming}")
+
+        # --- 스트림 제어 로직 ---
+
+        # 2. 신호 타임아웃을 체크합니다.
+        if now - self.last_csi_time > self.csi_timeout:
+            self.csi_flag = False
+        if now - self.last_yolo_time > self.yolo_timeout:
+            self.yolo_flag = False
+
+        # 3. 디바운싱: 마지막 상태 변경 후 3초 이내에는 추가 변경을 막습니다.
+        if now - self.last_trigger_time < 3:
+            return
+
+        # 4. 스트림 끄기/켜기 조건을 평가합니다.
+        is_streaming = self.stream_manager.is_active() # 타임아웃 적용 후 상태 재확인
+
+        # 끄기 조건: 스트림이 켜진 상태에서 CSI '1' 신호 "이벤트"가 발생했을 때
+        if is_streaming and topic == "ptz/trigger" and payload == "1":
+            print("[TRIGGER] CSI event while streaming -> stream OFF")
+            threading.Thread(target=self._send_stream_off, daemon=True).start()
+            self.stream_manager.stop_stream()
+            self.last_trigger_time = now
+            return
+
+        # 켜기 조건: 스트림이 꺼진 상태이고, 두 플래그가 모두 True일 때
+        if not is_streaming and self.csi_flag and self.yolo_flag:
+            print("[TRIGGER] CSI+YOLO confirmed -> stream ON")
+            threading.Thread(target=self._send_stream_on, daemon=True).start()
+            self.stream_manager.start_stream()
+            self.last_trigger_time = now
     
     # ----- YOLO AND GATE ADDITION START -----
     def _handle_csi_signal(self, payload, now):
         """CSI 신호 처리"""
         if payload == "1":
-
             self.csi_flag = True
             self.last_csi_time = now
             print(f"[CSI] Activity detected at {now}")
@@ -131,36 +114,6 @@ class MQTTService:
             self.yolo_flag = False
             self.last_yolo_time = now
             print(f"[YOLO] No person at {now}")
-    
-    def _evaluate_and_gate(self, now):
-        """AND Gate 평가 및 스트림 제어"""
-        # 타임아웃 체크
-        if now - self.last_csi_time > self.csi_timeout:
-            self.csi_flag = False
-        if now - self.last_yolo_time > self.yolo_timeout:
-            self.yolo_flag = False
-        
-        # AND Gate 로직
-        and_result = self.csi_flag and self.yolo_flag
-        
-        print(f"[AND] CSI: {self.csi_flag}, YOLO: {self.yolo_flag} → Result: {and_result}")
-        
-        # 스트림 제어
-        if and_result and not self.stream_manager.is_active():
-            # AND Gate True + 스트림 OFF → 스트림 ON
-            if now - self.last_trigger_time >= 3:  # 디바운싱
-                print("[AND] CSI + YOLO confirmed → stream ON")
-                threading.Thread(target=self._send_stream_on, daemon=True).start()
-                self.stream_manager.start_stream()
-                self.last_trigger_time = now
-        
-        elif not and_result and self.stream_manager.is_active():
-            # AND Gate False + 스트림 ON → 스트림 OFF
-            if now - self.last_trigger_time >= 3:  # 디바운싱
-                print("[AND] CSI or YOLO inactive → stream OFF")
-                threading.Thread(target=self._send_stream_off, daemon=True).start()
-                self.stream_manager.stop_stream()
-                self.last_trigger_time = now
     # ----- YOLO AND GATE ADDITION END -----
         
     def _send_stream_on(self):

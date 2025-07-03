@@ -41,6 +41,19 @@ class PTZService:
         if self.controller:
             self.controller.update(bbox)
             
+    def stop(self):
+        """PTZ 서비스와 MQTT 연결을 중지합니다."""
+        if not self._initialized:
+            return
+            
+        if self.publisher:
+            self.publisher.stop()
+        
+        self.publisher = None
+        self.controller = None
+        self._initialized = False
+        print("[PTZ] Service stopped")
+            
     def get_controller(self):
         return self.controller
         

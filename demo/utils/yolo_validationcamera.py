@@ -1,107 +1,107 @@
 import autorootcwd
 import cv2
 import time
+import threading
 from ultralytics import YOLO
 import os
 import torch
 import paho.mqtt.client as mqtt
 from demo.config.settings import BROKER_ADDR, BROKER_PORT
 
-class Yolo_ValidationCamera:
-    """YOLO 기반 사람 감지 검증용 카메라 클래스"""
+class Yolo_ValidationCamera(threading.Thread):
+    """YOLO 기반 사람 감지 검증용 카메라 클래스 (스레드)"""
     
     def __init__(self, rtsp_url=None, yolo_model_path=None):
-        # RTSP URL 설정
+        super().__init__(daemon=True)
         self.rtsp_url = rtsp_url or "rtsp://admin:kistWRLi^2rc@192.168.5.23:554/ISAPI/Streaming/channels/101"
-        
-        # YOLO 모델 로드
         self.yolo_model_path = yolo_model_path or os.path.abspath("checkpoints/yolov10n.pt")
         self.model = YOLO(self.yolo_model_path)
-        
-        # CUDA 디바이스 설정
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         print(f"[YOLO] Using device: {self.device}")
         
-        # MQTT 설정
         self.mqtt_client = mqtt.Client()
-        self.mqtt_client.connect(BROKER_ADDR, BROKER_PORT, 60)
-        self.mqtt_client.loop_start()
-        
-        # 카메라 초기화
         self.cap = None
         self.is_initialized = False
         
-        # 프레임 크롭 설정
         self.x_start, self.y_start = 860, 0
         self.x_end, self.y_end = 1260, 1080
+
+        self.running = False
+        self.lock = threading.Lock()
         
     def initialize(self):
-        """카메라 초기화"""
-        self.cap = cv2.VideoCapture(self.rtsp_url)
-        if not self.cap.isOpened():
-            print(f"Error: Unable to open RTSP stream: {self.rtsp_url}")
-            return False
+        """카메라 및 MQTT 초기화"""
+        try:
+            self.mqtt_client.connect(BROKER_ADDR, BROKER_PORT, 60)
+            self.mqtt_client.loop_start()
+            
+            self.cap = cv2.VideoCapture(self.rtsp_url, cv2.CAP_FFMPEG)
+
         
-        self.is_initialized = True
-        print(f"Validation camera initialized: {self.rtsp_url}")
-        return True
+            self.is_initialized = True
+            print(f"Validation camera initialized: {self.rtsp_url}")
+            return True
+        except Exception as e:
+            print(f"[YOLO Init Error] {e}")
+            return False
+
+    def run(self):
+        """백그라운드에서 사람 감지를 계속 수행"""
+        self.running = True
+        print("[YOLO] Background validation thread started")
+        
+        while self.running:
+            if not self.is_initialized:
+                time.sleep(1)
+                continue
+                
+            try:
+                person_detected = self.has_person()
+                payload = "1" if person_detected else "0"
+                with self.lock:
+                    self.mqtt_client.publish("yolo/validation", payload)
+            except Exception as e:
+                print(f"[YOLO] Validation run error: {e}")
+            
+            # 실시간 스트림을 계속 소비하기 위해 sleep 제거
+            # time.sleep(0.5)
     
     def has_person(self):
         """현재 프레임에서 사람이 있는지 확인"""
-        if not self.is_initialized:
+        if not self.is_initialized or self.cap is None:
             return False
             
         ret, frame = self.cap.read()
-        if not ret:
-            return False
-        
-        # 프레임 크롭
-        cropped_frame = frame[self.y_start:self.y_end, self.x_start:self.x_end]
-        
-        # YOLO 사람 감지
-        try:
-            results = self.model.predict(cropped_frame, device=self.device, classes=[0], verbose=False)
-            return len(results[0].boxes) > 0
-        except Exception as e:
-            print(f"YOLO prediction error: {e}")
-            return False
-    
-    def get_person_detection_status(self):
-        """사람 검출 상태 반환 및 MQTT 발행"""
-        if self.has_person():
-            # 사람 검출 시 MQTT로 "1" 발행
-            self.mqtt_client.publish("yolo/validation", "1")
-            return 1
-        return None
-    
-    def get_frame(self):
-        """원본 프레임 반환 (크롭된 상태)"""
-        if not self.is_initialized:
-            return None
-            
-        ret, frame = self.cap.read()
-        if not ret:
-            return None
-        
-        # 프레임 크롭
-        cropped_frame = frame[self.y_start:self.y_end, self.x_start:self.x_end]
-        return cropped_frame
-    
-    def release(self):
-        """리소스 해제"""
-        if self.cap:
+        if not ret or frame is None:
+            # 스트림이 끊겼을 경우 재연결 시도
+            print("[YOLO] Reconnecting to the stream...")
             self.cap.release()
-            self.is_initialized = False
+            self.cap = cv2.VideoCapture(self.rtsp_url, cv2.CAP_FFMPEG)
+            time.sleep(1.0) # 재연결 안정화를 위한 대기 시간 추가
+            return False
+        
+        cropped_frame = frame[self.y_start:self.y_end, self.x_start:self.x_end]
+        
+        results = self.model.predict(cropped_frame, device=self.device, classes=[0], verbose=False)
+        return len(results[0].boxes) > 0
+
+    def stop(self):
+        """스레드 및 리소스 정리"""
+        self.running = False
+        time.sleep(0.6) # 스레드 루프가 멈출 시간을 줌
         
         if self.mqtt_client:
             self.mqtt_client.loop_stop()
             self.mqtt_client.disconnect()
             
-        cv2.destroyAllWindows()
+        if self.cap:
+            self.cap.release()
+            
+        print("[YOLO] Validation camera stopped.")
     
     def __del__(self):
-        self.release()
-
+        if self.running:
+            self.stop()
 
 def main():
     """독립 실행용 메인 함수"""
@@ -111,26 +111,18 @@ def main():
         print("Failed to initialize validation camera")
         return
     
-    print("YOLO validation camera started. Press 'q' to exit.")
+    validation_cam.start() # 스레드 시작
     
-    while True:
-        detection_status = validation_cam.get_person_detection_status()
-        frame = validation_cam.get_frame()
-        
-        if frame is None:
-            print("Error: Failed to receive frame. Exiting...")
-            break
-        
-        timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
-        print(f"[{timestamp}] Person detection status: {detection_status}")
-        
-        cv2.imshow("YOLO Validation Camera", frame)
-        
-        if cv2.waitKey(1) & 0xFF == ord('q'):
-            break
+    print("YOLO validation camera running in background. Press 'q' to exit.")
     
-    validation_cam.release()
-
+    try:
+        while True:
+            time.sleep(1)
+    except KeyboardInterrupt:
+        print("Stopping...")
+        validation_cam.stop()
+        validation_cam.join()
+        print("Stopped.")
 
 if __name__ == "__main__":
     main()

@@ -19,13 +19,6 @@ from demo.utils.yolo_validationcamera import Yolo_ValidationCamera
 # ----- YOLO AND GATE ADDITION END -----
 
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
-FFMPEG_OPTS = (
-    "fflags nobuffer;"
-    "flags low_delay;"
-    "probesize 32;"
-    "analyzeduration 0"
-)
-os.environ["OPENCV_FFMPEG_CAPTURE_OPTIONS"] = FFMPEG_OPTS
 
 class HumanDetectionApp:
     def __init__(self):
@@ -45,13 +38,15 @@ class HumanDetectionApp:
         self.yolo_validation_camera = None
         # ----- YOLO AND GATE ADDITION END -----
         
+        self.detection_processor.start() # DetectionProcessor 스레드 시작
+        
         threading.Thread(target=self._heavy_init, daemon=True).start()
         self._start_services()
         self._setup_routes()
         self._register_socketio_handlers()
         
     def _heavy_init(self):
-        _ = DetectionProcessor()
+        # _ = DetectionProcessor() # 이제 스레드로 실행되므로 여기서 초기화 불필요
         print("[INIT] models pre-loaded")
         
         # ----- YOLO AND GATE ADDITION START -----
@@ -59,13 +54,14 @@ class HumanDetectionApp:
         try:
             self.yolo_validation_camera = Yolo_ValidationCamera()
             if self.yolo_validation_camera.initialize():
-                print("[INIT] YOLO validation camera started")
-                # YOLO 검증 카메라를 백그라운드에서 실행
-                threading.Thread(target=self._run_yolo_validation, daemon=True).start()
+                self.yolo_validation_camera.start()
+                print("[INIT] YOLO validation camera thread started")
             else:
                 print("[INIT] Failed to start YOLO validation camera")
+                self.yolo_validation_camera = None
         except Exception as e:
             print(f"[INIT] YOLO validation camera error: {e}")
+            self.yolo_validation_camera = None
         # ----- YOLO AND GATE ADDITION END -----
         
     def _start_services(self):
@@ -161,16 +157,23 @@ class HumanDetectionApp:
     def gen_frames(self):
         while True:
             if not self.stream_manager.is_active():
+                # 스트림이 비활성화되었을 때 PTZ 서비스도 멈춤 (필요시)
+                if self.ptz_initialized:
+                    self.ptz_service.stop()
+                    self.ptz_initialized = False # 재초기화를 위해 플래그 리셋
+                
                 blank = self.stream_manager.get_blank_frame()
                 ok, buf = cv2.imencode('.jpg', blank)
                 yield (b'--frame\r\nContent-Type: image/jpeg\r\n\r\n' +
                        buf.tobytes() + b'\r\n')
                 time.sleep(0.1)
                 continue
+            
             frame = self.stream_manager.get_frame()
             if frame is None:
                 time.sleep(0.01)
                 continue
+            
             processed_frame = self.process_frame(frame)
             if processed_frame is not None:
                 ok, buf = cv2.imencode('.jpg', processed_frame,
@@ -189,34 +192,15 @@ class HumanDetectionApp:
         return self.detection_processor.force_redetection()
         
     def run(self):
-        # ----- YOLO AND GATE ADDITION START -----
         try:
-            self.app.run(host=HOST, port=PORT, debug=DEBUG)
+            self.app.run(host=HOST, port=PORT, debug=DEBUG, use_reloader=False)
         finally:
-            # 서버 종료 시 YOLO 검증 카메라 정리
+            # 서버 종료 시 모든 스레드 정리
             if self.yolo_validation_camera:
-                self.yolo_validation_camera.release()
-        # ----- YOLO AND GATE ADDITION END -----
-
-    # ----- YOLO AND GATE ADDITION START -----
-    def _run_yolo_validation(self):
-        """YOLO 검증 카메라를 백그라운드에서 지속적으로 실행"""
-        print("[YOLO] Background validation started")
-        while True:
-            try:
-                if self.yolo_validation_camera and self.yolo_validation_camera.is_initialized:
-                    # 사람 검출 상태 확인 (MQTT 발행 포함)
-                    detection_status = self.yolo_validation_camera.get_person_detection_status()
-                    
-                    # 검출 상태 로깅 (선택사항)
-                    if detection_status == 1:
-                        print("[YOLO] Person detected - MQTT published")
-                    
-                time.sleep(0.5)  # 0.5초 간격으로 검출
-            except Exception as e:
-                print(f"[YOLO] Validation error: {e}")
-                time.sleep(1.0)  # 에러 시 1초 대기
-    # ----- YOLO AND GATE ADDITION END -----
+                self.yolo_validation_camera.stop()
+                self.yolo_validation_camera.join()
+            self.detection_processor.stop()
+            self.detection_processor.join()
 
 if __name__ == "__main__":
     app = HumanDetectionApp()

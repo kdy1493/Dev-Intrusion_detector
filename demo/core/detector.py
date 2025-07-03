@@ -109,24 +109,90 @@ class HumanTracker:
         return False
 
 
-class DetectionProcessor:
+class DetectionProcessor(threading.Thread):
     def __init__(self):
+        # --- thread 화 수정 시작작---
+        super().__init__(daemon=True)
+        # --- 수정 끝 ---
         self.detector = HumanDetector()
         self.tracker = HumanTracker()
         self.alert_manager = AlertManager()
-        # ptz/trigger OFF 발행용 MQTT 퍼블리셔
-        # self._trigger_cli = paho.Client()
-        # try:
-        #     self._trigger_cli.connect(BROKER_ADDR, BROKER_PORT, 60)
-        # except Exception as e:
-        #     print(f"[MQTT] trigger_cli connect 실패: {e}")
         self.reset_state()
+        
+        self.lock = threading.Lock()
+        self.input_frame = None
+        self.output_frame_for_stream = None
+        self.output_bbox_for_ptz = None
+        self.new_frame_event = threading.Event()
+        self.running = True
         
     def reset_state(self):
         self.detection_mode = True
         self.was_tracking = False
         self.last_timestamp = "--:--:--"
-        
+
+    def run(self):
+        """백그라운드 스레드에서 프레임 처리를 계속 수행합니다."""
+        while self.running:
+            self.new_frame_event.wait()
+            if not self.running:
+                break
+                
+            frame_to_process = None
+            with self.lock:
+                if self.input_frame is not None:
+                    frame_to_process = self.input_frame
+                    self.input_frame = None
+            
+            if frame_to_process is not None:
+                from demo.utils.viz import draw_timestamp, process_masks, draw_detection_boxes
+                
+                disp = frame_to_process.copy()
+                h, w = frame_to_process.shape[:2]
+                
+                cx, cy = w // 2, h // 2
+                cv2.line(disp, (cx, 0), (cx, h), (0, 255, 0), 1)
+                cv2.line(disp, (0, cy), (w, cy), (0, 255, 0), 1)
+                cv2.circle(disp, (cx, cy), 4, (0, 0, 255), -1)
+
+                now = time.time()
+                draw_timestamp(disp, time.strftime("%H:%M:%S", time.localtime(now)))
+                
+                bbox_for_ptz = None
+
+                if self.detection_mode:
+                    persons = self.detector.detect(frame_to_process)
+                    if persons:
+                        bbox_for_ptz = persons[0]
+                        self.tracker.initialize(frame_to_process, persons)
+                        self.was_tracking = True
+                        self.detection_mode = False
+                        draw_detection_boxes(disp, persons)
+                        self.alert_manager.send_alert(AlertCodes.PERSON_DETECTED, "PERSON_DETECTED")
+
+                elif self.tracker.tracker is not None:
+                    masks, has_mask = self.tracker.track(frame_to_process)
+                    if has_mask:
+                        bbox_for_ptz = process_masks(masks, disp, frame_to_process)
+                        if self.tracker.check_stationary(bbox_for_ptz, now):
+                            self.alert_manager.send_alert(AlertCodes.STATIONARY_BEHAVIOR, "STATIONARY BEHAVIOR DETECTED: analysis required")
+                            threading.Thread(
+                                target=self.post_stationary_bbox, 
+                                args=(bbox_for_ptz, (w, h)), 
+                                daemon=True
+                            ).start()
+                
+                with self.lock:
+                    self.output_frame_for_stream = disp
+                    self.output_bbox_for_ptz = bbox_for_ptz
+
+            self.new_frame_event.clear()
+
+    def stop(self):
+        """스레드를 안전하게 종료합니다."""
+        self.running = False
+        self.new_frame_event.set()
+
     def force_redetection(self):
         self.detection_mode = True
         self.was_tracking = False
@@ -150,50 +216,16 @@ class DetectionProcessor:
             print(f"[DAM] POST failed: {e}")
     
     def process_frame(self, frame: cv2.Mat) -> Tuple[cv2.Mat, Optional[Tuple]]:
-        from demo.utils.viz import draw_timestamp, process_masks, draw_detection_boxes
+        """
+        메인 스레드에서는 이 메소드를 호출합니다.
+        프레임을 버퍼에 넣고 즉시 최신 처리 결과를 반환합니다.
+        """
+        with self.lock:
+            self.input_frame = frame
+            # 처리된 최신 프레임과 bbox를 즉시 반환 (기다리지 않음)
+            output_frame = self.output_frame_for_stream if self.output_frame_for_stream is not None else frame
+            bbox = self.output_bbox_for_ptz
         
-        disp = frame.copy()
-        h, w = frame.shape[:2]
+        self.new_frame_event.set() # 처리 스레드에게 새 프레임이 왔다고 알림
         
-        cx, cy = w // 2, h // 2
-        cv2.line(disp, (cx, 0), (cx, h), (0, 255, 0), 1)
-        cv2.line(disp, (0, cy), (w, cy), (0, 255, 0), 1)
-        cv2.circle(disp, (cx, cy), 4, (0, 0, 255), -1)
-
-        now = time.time()
-        draw_timestamp(disp, time.strftime("%H:%M:%S", time.localtime(now)))
-        
-        bbox_for_ptz = None
-
-        if self.detection_mode:
-            persons = self.detector.detect(frame)
-            if persons:
-                bbox_for_ptz = persons[0]
-                self.tracker.initialize(frame, persons)
-                self.was_tracking = True
-                self.detection_mode = False
-                draw_detection_boxes(disp, persons)
-                self.alert_manager.send_alert(AlertCodes.PERSON_DETECTED, "PERSON_DETECTED")
-
-        elif self.tracker.tracker is not None:
-            masks, has_mask = self.tracker.track(frame)
-            if has_mask:
-                bbox_for_ptz = process_masks(masks, disp, frame)
-                if self.tracker.check_stationary(bbox_for_ptz, now):
-                    self.alert_manager.send_alert(AlertCodes.STATIONARY_BEHAVIOR,
-                                                  "STATIONARY BEHAVIOR DETECTED: analysis required")
-                    threading.Thread(
-                        target=self.post_stationary_bbox, 
-                        args=(bbox_for_ptz, (w, h)), 
-                        daemon=True
-                    ).start()
-            # elif self.was_tracking:
-            #     self.alert_manager.send_alert(AlertCodes.PERSON_LOST, "PERSON_LOST")
-            #     # 스트림 OFF 트리거 전송
-            #     try:
-            #         self._trigger_cli.publish("ptz/trigger", "0")
-            #     except Exception as e:
-            #         print(f"[MQTT] PERSON_LOST → OFF publish 실패: {e}")
-            #     self.reset_state()
-
-        return disp, bbox_for_ptz 
+        return output_frame, bbox 

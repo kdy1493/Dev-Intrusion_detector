@@ -6,9 +6,13 @@ from typing import Optional
 from demo.config.settings import STREAM_URL
 
 class FrameGrabber(threading.Thread):
-    def __init__(self, url: str):
+    def __init__(self, url: str | int):
         super().__init__(daemon=True)
-        self.cap = cv2.VideoCapture(url, cv2.CAP_FFMPEG)
+        # URL이 정수인 경우 (카메라 인덱스) 그대로 사용, 문자열인 경우 FFMPEG 사용
+        if isinstance(url, int):
+            self.cap = cv2.VideoCapture(url)
+        else:
+            self.cap = cv2.VideoCapture(url, cv2.CAP_FFMPEG)
         self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
         self.frame = None
         self.lock = threading.Lock()
@@ -32,7 +36,7 @@ class FrameGrabber(threading.Thread):
         self.running = False
 
 class StreamManager:
-    def __init__(self, stream_url: str = STREAM_URL):
+    def __init__(self, stream_url: str | int = STREAM_URL):
         self.stream_url = stream_url
         self.stream_active = False
         self.grabber: Optional[FrameGrabber] = None
