@@ -6,14 +6,14 @@ from ultralytics import YOLO
 import os
 import torch
 import paho.mqtt.client as mqtt
-from demo.config.settings import BROKER_ADDR, BROKER_PORT
+from demo.config.settings import BROKER_ADDR, BROKER_PORT, VALIDATION_CAMERA_URL
 
 class Yolo_ValidationCamera(threading.Thread):
     """YOLO 기반 사람 감지 검증용 카메라 클래스 (스레드)"""
     
     def __init__(self, rtsp_url=None, yolo_model_path=None):
         super().__init__(daemon=True)
-        self.rtsp_url = rtsp_url or "rtsp://admin:kistWRLi^2rc@192.168.5.23:554/ISAPI/Streaming/channels/101"
+        self.rtsp_url = rtsp_url or VALIDATION_CAMERA_URL
         self.yolo_model_path = yolo_model_path or os.path.abspath("checkpoints/yolov10n.pt")
         self.model = YOLO(self.yolo_model_path)
         self.device = "cuda" if torch.cuda.is_available() else "cpu"

@@ -31,6 +31,7 @@ CAMERA_BACKEND = cv2.CAP_DSHOW
 
 # Camera streaming settingsAdd commentMore actions
 STREAM_URL = 1  # 1번 인덱스 카메라 사용
+VALIDATION_CAMERA_URL = "rtsp://admin:kistWRLi^2rc@192.168.5.23:554/ISAPI/Streaming/channels/101"
 BROKER_ADDR = "61.252.57.136"
 BROKER_PORT = 4991
 

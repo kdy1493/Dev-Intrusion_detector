@@ -1,9 +1,10 @@
 import cv2
 from ultralytics import YOLO
 import torch
+from demo.config.settings import VALIDATION_CAMERA_URL
 
 def main():
-    rtsp_url = "rtsp://admin:kistWRLi^2rc@192.168.5.23:554/ISAPI/Streaming/channels/101"
+    rtsp_url = VALIDATION_CAMERA_URL
     cap = cv2.VideoCapture(rtsp_url, cv2.CAP_FFMPEG)
     model = YOLO("checkpoints/yolov10n.pt")
     device = "cuda" if torch.cuda.is_available() else "cpu"
