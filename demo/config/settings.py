@@ -30,10 +30,10 @@ CAMERA_INDEX = 0
 CAMERA_BACKEND = cv2.CAP_DSHOW
 
 # Camera streaming settingsAdd commentMore actions
-STREAM_URL = 1  # 1번 인덱스 카메라 사용
+STREAM_URL = "http://172.20.10.12:5011/video_feed"
+VALIDATION_CAMERA_URL = "rtsp://admin:kistWRLi^2rc@192.168.5.23:554/ISAPI/Streaming/channels/101"
 BROKER_ADDR = "61.252.57.136"
 BROKER_PORT = 4991
-
 # PTZ MQTT settings
 MQTT_PTZ_TOPIC = "ptz/control"
 MQTT_PTZ_CLIENT_ID = "human_app_ptz"
