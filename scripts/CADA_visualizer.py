@@ -7,7 +7,7 @@ from collections import defaultdict, deque
 import numpy as np
 from src.CADA.csi_buffer_utils import RealtimeCSIBufferManager
 from src.CADA.CADA_process import SlidingCadaProcessor, parse_and_normalize_payload, load_calibration_data
-from demo.utils.mqtt_manager import start_csi_mqtt_thread
+from demo.utils.csi_mqtt_manager import start_csi_mqtt_thread
 from demo.config.settings import CSI_TOPIC, CSI_SUBCARRIERS as SUBCARRIER_NUM, CSI_INDICES_TO_REMOVE
 
 # ----- 설정 -----

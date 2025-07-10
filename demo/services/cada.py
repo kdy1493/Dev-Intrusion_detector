@@ -1,6 +1,6 @@
 from src.CADA.csi_buffer_utils import RealtimeCSIBufferManager 
 from src.CADA.CADA_process import SlidingCadaProcessor, load_calibration_data
-from demo.utils.mqtt_manager import MQTTManager
+from demo.utils.csi_mqtt_manager import MQTTManager
 from demo.config.settings import (
     CSI_TOPIC, CSI_WINDOW_SIZE, CSI_STRIDE, CSI_SMALL_WIN_SIZE,
     CSI_SUBCARRIERS, CSI_INDICES_TO_REMOVE, CSI_FPS_LIMIT,
