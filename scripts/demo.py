@@ -13,9 +13,9 @@ from datetime import datetime
 from typing import List, Dict
 # 모듈 import를 위한 경로 추가
 sys.path.append(str(Path(__file__).resolve().parent.parent / "src/dam"))
-from dam.camera_manager import CameraManager
-from dam.dam_analyzer import DAMAnalyzer
-from dam.log_manager import LogManager
+from camera_manager import CameraManager        
+from dam_analyzer import DAMAnalyzer
+from log_manager import LogManager
 from flask import Flask, request, jsonify
 # -----------------------------------------------------------------------------
 # Configuration

@@ -7,7 +7,7 @@ import threading
 from flask import Flask, Response, render_template, jsonify, request
 from flask_socketio import SocketIO
 from demo.core.stream import StreamManager
-from demo.core.detector import DetectionProcessor
+from src.detector import DetectionProcessor   
 from demo.services.cada import CADAService
 from demo.services.mqtt import MQTTService
 from demo.services.ptz import PTZService
