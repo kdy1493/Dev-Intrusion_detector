@@ -25,12 +25,12 @@ STATIONARY_THRESHOLD = 5  # pixels
 STATIONARY_TIME_THRESHOLD = 3.0  # seconds
 MASK_THRESHOLD = 0.5  # confidence threshold for mask generation
 
-# Camera settings
+# Camera settings``
 CAMERA_INDEX = 0
 CAMERA_BACKEND = cv2.CAP_DSHOW
 
 # Camera streaming settingsAdd commentMore actions
-STREAM_URL = 1  # 1번 인덱스 카메라 사용
+STREAM_URL = "http://192.168.5.59:5011/video_feed"  # 1번 인덱스 카메라 사용
 BROKER_ADDR = "61.252.57.136"
 BROKER_PORT = 4991
 

@@ -18,7 +18,7 @@ class MQTTService:
         self.last_csi_time = 0
         self.last_yolo_time = 0
         self.csi_timeout = 5.0  # CSI 신호 타임아웃 (5초)
-        self.yolo_timeout = 3.0  # YOLO 신호 타임아웃 (3초)
+        self.yolo_timeout = 5.0  # YOLO 신호 타임아웃 (3초)
         # ----- YOLO AND GATE ADDITION END -----
         
         self._setup_mqtt_client()
@@ -70,8 +70,8 @@ class MQTTService:
         if now - self.last_yolo_time > self.yolo_timeout:
             self.yolo_flag = False
 
-        # 3. 디바운싱: 마지막 상태 변경 후 3초 이내에는 추가 변경을 막습니다.
-        if now - self.last_trigger_time < 3:
+        # 3. 디바운싱: 마지막 상태 변경 후 10초 이내에는 추가 변경을 막습니다.
+        if now - self.last_trigger_time < 10:
             return
 
         # 4. 스트림 끄기/켜기 조건을 평가합니다.
